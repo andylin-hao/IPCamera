@@ -57,7 +57,11 @@ def try_out_passwords(url):
         login = root.find('rpermission')
         login.set('pwd', pwd)
         params = {'xml': ET.tostring(root).decode('utf-8')}
-        res = requests.get(url=url, params=params, headers=head)
+        # noinspection PyBroadException
+        try:
+            res = requests.get(url=url, params=params, headers=head)
+        except Exception:
+            return -1
         if res.status_code != 200:
             return -1
         try:
