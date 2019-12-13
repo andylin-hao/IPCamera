@@ -90,22 +90,22 @@ def try_out_passwords(url):
             for t, index in threads:
                 t.join()
                 result = t.get_result()
-                if result:
-                    results[index] = True
-                    raise BreakError
                 if result is None:
                     raise BreakError
-                if result == -1:
+                elif result == -1:
                     invalid_list.append(url)
+                    raise BreakError
+                else:
+                    results[index] = True
                     raise BreakError
     except BreakError as e:
         pass
     pwd = passwords[results]
     if len(pwd) > 0:
-        print("Tested {}: failed".format(url))
+        print("Tested {}: success".format(url))
         return pwd[0]
     else:
-        print("Tested {}: success".format(url))
+        print("Tested {}: failed".format(url))
         return None
 
 
