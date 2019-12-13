@@ -49,7 +49,6 @@ def acquire_all_cameras():
 
 
 def try_out_passwords(url):
-    print("Testing {}:".format(url))
     url = url + url_suffix
 
     def try_out_single_password(pwd):
@@ -103,8 +102,10 @@ def try_out_passwords(url):
         pass
     pwd = passwords[results]
     if len(pwd) > 0:
+        print("Tested {}: failed".format(url))
         return pwd[0]
     else:
+        print("Tested {}: success".format(url))
         return None
 
 
