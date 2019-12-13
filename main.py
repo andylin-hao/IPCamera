@@ -95,7 +95,7 @@ def try_out_passwords(url):
                 elif result == -1:
                     invalid_list.append(url)
                     raise BreakError
-                else:
+                elif result is True:
                     results[index] = True
                     raise BreakError
     except BreakError as e:
