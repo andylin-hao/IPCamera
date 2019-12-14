@@ -95,12 +95,12 @@ def try_out_passwords(url_count):
     except BreakError as e:
         count.value += 1
         if e.result is None or e.result == -1:
-            print("Tested {}: failed {}".format(url, count.value))
+            print("Tested {}: failed to connect {}".format(url, count.value))
         else:
             print("Tested {}: success {}".format(url, count.value))
         return e.result
     count.value += 1
-    print("Tested {}: failed {}".format(url, count.value))
+    print("Tested {}: failed to crack {}".format(url, count.value))
     return None
 
 
