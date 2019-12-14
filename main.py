@@ -59,7 +59,7 @@ def try_out_passwords(url_count):
         params = {'xml': ET.tostring(root).decode('utf-8')}
         # noinspection PyBroadException
         try:
-            res = requests.get(url=url, params=params, headers=head, timeout=60)
+            res = requests.get(url=url, params=params, headers=head, timeout=20)
         except Exception:
             return -1
         if res.status_code != 200:
