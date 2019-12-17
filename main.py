@@ -97,7 +97,7 @@ def try_out_passwords(url_count):
         if e.result is None or e.result == -1:
             print("Tested {}: failed to connect {}".format(url, count.value))
         else:
-            print("Tested {}: success {}".format(url, count.value))
+            print("Tested {}: success {} {}".format(url, e.result, count.value))
         return e.result
     count.value += 1
     print("Tested {}: failed to crack {}".format(url, count.value))
